@@ -5,3 +5,7 @@
 - 更新启动脚本 `bin/deepsearch.js` 支持构建产物，新增 GitHub workflow (`.github/workflows/publish.yml`) 实现 release 时自动 `npm publish`。
 - 调整文档 (`README.md`、`AGENTS.md`) 说明新的 TypeScript 架构、启动方式与发布流程; 扩充 `.gitignore`。
 - 移除旧的 Python 依赖文件（`pyproject.toml`、`uv.lock` 等）并提交 `refactor: migrate project to TypeScript MCP server`。
+
+## 2025-09-29 17:27:29 CST
+- 根据更新后的 `API_Docs.md` 改写 `source/api.ts`，改用 Google Gemini `generateContent` 接口，新增检索提示构建与响应解析逻辑。
+- 调整 Vitest 测试（`tests/transport.test.ts` 等）以匹配新接口格式，并再次执行 `npm test`，12 项用例全部通过。

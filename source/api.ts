@@ -43,7 +43,7 @@ export class DeepSearchConfig {
   constructor(params: { apiKey: string; baseUrl?: string; model?: string; timeoutMs?: number }) {
     this.apiKey = params.apiKey;
     this.baseUrl = params.baseUrl ? normalizeBaseUrl(params.baseUrl) : "https://yunwu.ai";
-    this.model = params.model ?? "gemini-2.5-pro";
+    this.model = params.model ?? "gemini-2.5-flash";
     this.timeoutMs = params.timeoutMs ?? 400_000;
   }
 
@@ -54,7 +54,7 @@ export class DeepSearchConfig {
     }
 
     const rawBase = getFirstEnv(["DEEPSEARCH_BASE_URL", "BASE_URL"]) ?? "https://yunwu.ai";
-    const model = getFirstEnv(["DEEPSEARCH_MODEL", "MODEL_NAME", "MODEL"]) ?? "gemini-2.5-pro";
+    const model = getFirstEnv(["DEEPSEARCH_MODEL", "MODEL_NAME", "MODEL"]) ?? "gemini-2.5-flash";
     const timeoutRaw = getFirstEnv(["DEEPSEARCH_TIMEOUT", "TIMEOUT"]) ?? "400";
 
     const timeoutValue = Number(timeoutRaw);
@@ -99,11 +99,12 @@ export interface DeepSearchTransportOptions {
 
 export class DeepSearchTransport {
   private readonly config: DeepSearchConfig;
-  private readonly endpoint: string;
+  private readonly endpoint: URL;
 
   constructor(options: DeepSearchTransportOptions | DeepSearchConfig) {
     this.config = options instanceof DeepSearchConfig ? options : new DeepSearchConfig(options);
-    this.endpoint = new URL("/v1/chat/completions", this.config.baseUrl).toString();
+    this.endpoint = new URL("/v1beta/models/gemini-2.5-flash:generateContent", this.config.baseUrl);
+    this.endpoint.searchParams.set("key", this.config.apiKey);
   }
 
   static fromEnv(): DeepSearchTransport {
@@ -120,7 +121,6 @@ export class DeepSearchTransport {
       const response = await fetch(this.endpoint, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${this.config.apiKey}`,
           "Content-Type": "application/json",
           "Accept": "application/json",
         },
@@ -153,36 +153,26 @@ export class DeepSearchTransport {
   }
 
   private buildRequest(toolName: string, payload: InvokePayload): Record<string, unknown> {
-    const systemPrompt = this.systemPrompt(toolName);
+    const prompt = this.buildUserPrompt(toolName, payload);
     return {
-      model: this.config.model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(payload, null, 2) },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
       ],
-      temperature: 0.1,
-      top_p: 0.9,
-      stream: false,
-      response_format: { type: "json_object" },
-      tools: [this.toolSchema()],
-      tool_choice: {
-        type: "function",
-        function: { name: "format_deepsearch_response" },
-      },
+      tools: [{ googleSearch: {} }],
     };
   }
 
   private parseResponse(data: Record<string, unknown>): DeepSearchResponsePayload {
-    const choices = data?.choices;
-    if (!Array.isArray(choices) || choices.length === 0) {
+    const candidates = data?.candidates;
+    if (!Array.isArray(candidates) || candidates.length === 0) {
       throw new DeepSearchAPIError("DeepSearch API 响应缺少有效的消息内容");
     }
 
-    const first = choices[0] as Record<string, unknown>;
-    const message = first?.message as Record<string, unknown> | undefined;
-    const content = message?.content;
-
-    if (typeof content !== "string") {
+    const content = extractTextFromCandidate(candidates[0] as Record<string, unknown>);
+    if (!content) {
       throw new DeepSearchAPIError("DeepSearch API 响应内容不是合法的 JSON");
     }
 
@@ -198,10 +188,10 @@ export class DeepSearchTransport {
     let usage = parsed.usage as DeepSearchUsage | undefined;
 
     if (!usage) {
-      const apiUsage = (data.usage ?? {}) as Record<string, unknown>;
+      const usageMetadata = (data.usageMetadata ?? {}) as Record<string, unknown>;
       usage = {
-        input_tokens: Number(apiUsage.prompt_tokens ?? 0),
-        output_tokens: Number(apiUsage.completion_tokens ?? 0),
+        input_tokens: Number(usageMetadata.promptTokenCount ?? 0),
+        output_tokens: Number(usageMetadata.candidatesTokenCount ?? usageMetadata.cachedContentTokenCount ?? 0),
       };
     }
 
@@ -217,46 +207,46 @@ export class DeepSearchTransport {
     };
   }
 
-  private toolSchema(): Record<string, unknown> {
-    return {
-      type: "function",
-      function: {
-        name: "format_deepsearch_response",
-        description: "格式化 DeepSearch 的结构化响应",
-        parameters: {
-          type: "object",
-          properties: {
-            items: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  snippet: { type: "string" },
-                  url: { type: "string", format: "uri" },
-                  score: { type: ["number", "null"] },
-                },
-                required: ["title", "url"],
-              },
-            },
-            metadata: { type: "object" },
-            usage: { type: "object" },
-          },
-          required: ["items"],
-        },
-      },
-    };
-  }
+  private buildUserPrompt(toolName: string, payload: InvokePayload): string {
+    const topK = payload.top_k ?? 5;
+    const locale = payload.locale ?? "zh-CN";
+    const filters = payload.filters ?? {};
+    const filterInstruction =
+      toolName === "deepsearch-web"
+        ? "必须使用 filters 中的 site/time_range 限制，确保返回结果满足条件。"
+        : "可结合 filters 中提供的约束优化检索。";
 
-  private systemPrompt(toolName: string): string {
-    if (toolName === "deepsearch-web") {
-      return "你是 DeepSearch-Website 工具，必须返回 JSON，其中 items 为命中网站结果，metadata 至少包含 source 字段；确保 filters 中 site/time_range 限制生效。";
-    }
-
-    return "你是 DeepSearch 通用检索工具，必须返回 JSON，其中 items 为查询相关结果列表，metadata 包含来源与延迟信息，usage 提供 token 统计。";
+    return [
+      "任务: 调用 googleSearch 工具检索并汇总最新的权威信息。",
+      `查询: ${payload.query}`,
+      `语言: ${locale}`,
+      `返回条数: ${topK}`,
+      `附加筛选: ${JSON.stringify(filters)}`,
+      filterInstruction,
+      "请以 JSON 形式输出，结构必须为 {\"items\":[{\"title\":string,\"snippet\":string,\"url\":string,\"score\":number|null}],\"metadata\":{\"source\":string,\"locale\":string,\"top_k\":number,\"filters\":object},\"usage\":{\"input_tokens\":number,\"output_tokens\":number}}。",
+      "items 按相关度降序，snippet 使用中文简洁总结，score 为可信度(0-1)，无法给出则为 null。",
+      "metadata.source 请标记为 'google-search'，并据实补充其他信息。",
+    ].join("\n");
   }
 
   close(): void {
     // 当前实现使用无状态 HTTP 请求，无需保留连接
   }
+}
+
+function extractTextFromCandidate(candidate: Record<string, unknown>): string | undefined {
+  const content = candidate?.content as Record<string, unknown> | undefined;
+  const parts = content?.parts;
+  if (!Array.isArray(parts)) {
+    return undefined;
+  }
+
+  for (const part of parts) {
+    const text = (part as Record<string, unknown>)?.text;
+    if (typeof text === "string" && text.trim().length > 0) {
+      return text;
+    }
+  }
+
+  return undefined;
 }

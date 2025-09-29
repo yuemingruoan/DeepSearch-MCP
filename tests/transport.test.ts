@@ -22,7 +22,7 @@ describe("DeepSearchTransport", () => {
     }
   });
 
-  it("invokes chat endpoint and parses payload", async () => {
+  it("invokes google search endpoint and parses payload", async () => {
     const mockPayload = {
       items: [
         {
@@ -37,15 +37,19 @@ describe("DeepSearchTransport", () => {
     };
 
     const responseBody = {
-      choices: [
+      candidates: [
         {
-          message: { content: JSON.stringify(mockPayload) },
+          content: {
+            parts: [
+              { text: JSON.stringify(mockPayload) },
+            ],
+          },
         },
       ],
-      usage: {
-        prompt_tokens: 9,
-        completion_tokens: 11,
-        total_tokens: 20,
+      usageMetadata: {
+        promptTokenCount: 9,
+        candidatesTokenCount: 11,
+        totalTokenCount: 20,
       },
     };
 
@@ -77,26 +81,28 @@ describe("DeepSearchTransport", () => {
     expect(result.metadata.source).toBe("deepsearch");
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://yunwu.ai/v1/chat/completions");
+    const [urlValue, init] = fetchMock.mock.calls[0] as [string | URL, RequestInit];
+    const href = urlValue instanceof URL ? urlValue.href : urlValue;
+    expect(href).toBe("https://yunwu.ai/v1beta/models/gemini-2.5-flash:generateContent?key=test-key");
     expect(init?.method).toBe("POST");
 
     const parsedBody = JSON.parse(init?.body as string);
-    expect(parsedBody.model).toBe("gemini-2.5-pro");
-    expect(parsedBody.messages[1].content).toContain("pytest 查询");
-    expect(parsedBody.tools).toHaveLength(1);
+    expect(parsedBody.contents[0].parts[0].text).toContain("pytest 查询");
+    expect(parsedBody.tools).toEqual([{ googleSearch: {} }]);
   });
 
   it("throws on invalid JSON content", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          choices: [
+          candidates: [
             {
-              message: { content: "不是合法 JSON" },
+              content: {
+                parts: [{ text: "不是合法 JSON" }],
+              },
             },
           ],
-          usage: {},
+          usageMetadata: {},
         }),
         {
           status: 200,
