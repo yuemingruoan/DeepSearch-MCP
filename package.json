@@ -6,7 +6,7 @@
   "main": "./dist/main.js",
   "types": "./dist/main.d.ts",
   "bin": {
-    "deepsearch": "./bin/deepsearch.js"
+    "deepsearch": "bin/deepsearch.js"
   },
   "exports": {
     ".": {
