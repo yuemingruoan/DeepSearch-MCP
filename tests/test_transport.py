@@ -8,7 +8,7 @@ from typing import List
 import httpx
 import pytest
 
-from source.api import DeepSearchAPIError, DeepSearchTransport
+from source.api import DeepSearchAPIError, DeepSearchConfig, DeepSearchTransport
 
 
 def _mock_response(items: List[dict]) -> dict:
@@ -115,3 +115,17 @@ def test_transport_raises_error_on_invalid_json_content():
 
     with pytest.raises(DeepSearchAPIError):
         transport.invoke_tool("deepsearch", {"query": "bad json"})
+
+
+def test_config_from_env_supports_legacy_variable_names(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_KEY", "env-key")
+    monkeypatch.setenv("BASE_URL", "https://example.com/v1/chat/completions")
+    monkeypatch.setenv("MODEL_NAME", "gemini-web")
+    monkeypatch.setenv("DEEPSEARCH_TIMEOUT", "15")
+
+    config = DeepSearchConfig.from_env()
+
+    assert config.api_key == "env-key"
+    assert config.base_url == "https://example.com"
+    assert config.model == "gemini-web"
+    assert config.timeout == 15.0
