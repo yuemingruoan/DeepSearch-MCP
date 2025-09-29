@@ -9,3 +9,8 @@
 ## 2025-09-29 17:27:29 CST
 - 根据更新后的 `API_Docs.md` 改写 `source/api.ts`，改用 Google Gemini `generateContent` 接口，新增检索提示构建与响应解析逻辑。
 - 调整 Vitest 测试（`tests/transport.test.ts` 等）以匹配新接口格式，并再次执行 `npm test`，12 项用例全部通过。
+
+## 2025-09-29 18:00:09 CST
+- 强化 googleSearch 提示词与 JSON 清洗逻辑，避免模型返回 Markdown 或额外文本导致解析失败。
+- 更新 `sanitizeJsonContent` 去除 Markdown/列表并提取首个 JSON 块，对应调整 `tests/transport.test.ts`，Vitest 12 项用例全部通过。
+- 执行 `npx tsx scripts/test-call.ts` 实际调用 Google Search API，成功返回 3 条结果并打印元数据。

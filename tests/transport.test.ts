@@ -41,7 +41,12 @@ describe("DeepSearchTransport", () => {
         {
           content: {
             parts: [
-              { text: JSON.stringify(mockPayload) },
+              {
+                text:
+                  "**Answer:**\n- 以下为结构化结果\n```json\n" +
+                  JSON.stringify(mockPayload, null, 2) +
+                  "\n```\n- 结束",
+              },
             ],
           },
         },

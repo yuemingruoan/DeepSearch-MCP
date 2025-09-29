@@ -178,7 +178,7 @@ export class DeepSearchTransport {
 
     let parsed: Record<string, unknown>;
     try {
-      parsed = JSON.parse(content);
+      parsed = JSON.parse(sanitizeJsonContent(content));
     } catch (error) {
       throw new DeepSearchAPIError("DeepSearch API 响应内容不是合法的 JSON", { cause: error as Error });
     }
@@ -223,9 +223,11 @@ export class DeepSearchTransport {
       `返回条数: ${topK}`,
       `附加筛选: ${JSON.stringify(filters)}`,
       filterInstruction,
-      "请以 JSON 形式输出，结构必须为 {\"items\":[{\"title\":string,\"snippet\":string,\"url\":string,\"score\":number|null}],\"metadata\":{\"source\":string,\"locale\":string,\"top_k\":number,\"filters\":object},\"usage\":{\"input_tokens\":number,\"output_tokens\":number}}。",
+      "输出格式要求: 必须返回合法 JSON，不能包含 Markdown、注释、额外文本或代码块标记。",
+      "最终只输出以下结构: {\"items\":[{\"title\":string,\"snippet\":string,\"url\":string,\"score\":number|null}],\"metadata\":{\"source\":string,\"locale\":string,\"top_k\":number,\"filters\":object},\"usage\":{\"input_tokens\":number,\"output_tokens\":number}}。",
       "items 按相关度降序，snippet 使用中文简洁总结，score 为可信度(0-1)，无法给出则为 null。",
-      "metadata.source 请标记为 'google-search'，并据实补充其他信息。",
+      "metadata.source 固定为 'google-search'，并补充 locale/top_k/filters 信息。",
+      "⚠️ 严禁输出任何额外字符（包括 ```、解释文字、列表、粗体等）。",
     ].join("\n");
   }
 
@@ -249,4 +251,30 @@ function extractTextFromCandidate(candidate: Record<string, unknown>): string | 
   }
 
   return undefined;
+}
+
+function sanitizeJsonContent(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("```")) {
+    const lines = trimmed.split(/\r?\n/);
+    // remove first fence
+    lines.shift();
+    // remove closing fence if present at end
+    if (lines.length > 0 && lines[lines.length - 1].trim().startsWith("```")) {
+      lines.pop();
+    }
+    return lines.join("\n").trim();
+  }
+  // 去除常见的 Markdown 前缀（如 **、- 、序号等）
+  const withoutMarkdown = trimmed
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/^\*\*(.*?)\*\*/gm, "$1");
+
+  const match = withoutMarkdown.match(/\{[\s\S]*\}/);
+  if (match) {
+    return match[0];
+  }
+
+  return withoutMarkdown;
 }
