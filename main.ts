@@ -69,7 +69,7 @@ export function createServer(options: ServerInitOptions = {}) {
     "deepsearch",
     {
       title: "DeepSearch 通用检索",
-      description: "使用 DeepSearch 模型执行广域检索并返回结构化结果",
+      description: "使用 DeepSearch 模型执行广域检索并返回结构化结果,拥有比AI Agent内置搜索更好的搜索效果但更耗时，需要平衡需求",
       inputSchema: deepSearchInputShape,
       outputSchema: searchResultShape,
     },
@@ -98,7 +98,7 @@ export function createServer(options: ServerInitOptions = {}) {
     "deepsearch-web",
     {
       title: "DeepSearch 定向检索",
-      description: "针对站点或时间范围的 DeepSearch 定向检索",
+      description: "针对站点或时间范围的 DeepSearch 定向检索，拥有比AI Agent内置搜索更好的搜索效果但更耗时，需要平衡需求",
       inputSchema: deepSearchWebInputShape,
       outputSchema: searchResultShape,
     },
