@@ -8,6 +8,7 @@
 - `main.ts`：MCP 服务器入口，通过 STDIO 暴露 `deepsearch` 与 `deepsearch-web` 工具。
 - `tests/*.test.ts`：Vitest 单元测试，覆盖客户端、传输层、代理层与服务器行为。
 - `.env`：存放 Deepsearch 相关凭证（API Key、Endpoint 等），运行时由代理加载。
+- `source/logger.ts`：轻量日志设施，所有关键事件会同步输出到控制台并写入 `log/<timestamp>.log`。
 
 ## 代理角色说明
 
@@ -42,6 +43,7 @@
 - 在 `.env` 配置 `DEEPSEARCH_API_KEY` / `API_KEY`、`DEEPSEARCH_BASE_URL` / `BASE_URL`、`MODEL_NAME` 等变量，由 `dotenv` 自动加载。
 - 启动 MCP 服务器：`npm run deepsearch`（开发模式）或 `node dist/main.js`（构建后）。
 - 运行测试：`npm test`。
+- 若需观察详细日志，在启动前设置 `export DEEPSEARCH_LOG_LEVEL=debug`；日志文件保存在 `log/` 目录，按 ISO 时间戳命名。
 
 ## 使用建议
 1. 在对话中明确检索目标（背景、趋势、数据等），有助于获得更高质量的结果。
