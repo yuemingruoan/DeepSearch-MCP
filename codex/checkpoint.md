@@ -1,3 +1,6 @@
+## 需知 ##
+- 本文件为ai的操作日志，可以更方便的得知先前的AI都进行过哪些操作，方便新ai快速了解项目和进行回溯
+
 ## 2025-09-29 16:56:38 CST
 - 重构项目为 TypeScript：新增 `main.ts`、`source/api.ts`、`deepsearch_mcp/client.ts`、`deepsearch_agents/deepsearch*.ts` 等文件，并删除对应 Python 实现。
 - 配置 Node.js 工程：更新 `package.json`、创建 `tsconfig.json`、`vitest.config.ts`、安装 npm 依赖并生成 `package-lock.json`。
