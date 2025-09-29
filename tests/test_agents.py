@@ -6,9 +6,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from deepsearch_agents import DeepSearchAgent, DeepSearchWebAgent
 from deepsearch_mcp.client import SearchResult, SearchResultItem
-from mcp.deepsearch import DeepSearchAgent
-from mcp.deepsearch_web import DeepSearchWebAgent
 
 
 @pytest.fixture
