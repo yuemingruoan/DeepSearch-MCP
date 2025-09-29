@@ -1,12 +1,13 @@
 # DeepSearch MCP 项目
 
-DeepSearch MCP 提供统一的 Python 客户端与代理层，方便在 MCP（Model Context Protocol）生态中调用可联网的 Deepsearch 模型，实现广域检索与定向站点检索能力。项目采用 TDD 驱动开发，目前已覆盖客户端、传输层与代理封装的核心单元测试。
+DeepSearch MCP 提供统一的 Python 客户端、代理层与 MCP 服务器入口，方便在 Model Context Protocol (MCP) 生态中调用可联网的 Deepsearch 模型，实现广域检索与定向站点检索能力。项目采用 TDD 驱动开发，目前已覆盖客户端、传输层、代理封装与服务器工具注册的核心单元测试。
 
 ## 功能特性
 - `deepsearch_mcp`：封装通用的 `DeepSearchMCPClient`，负责与 MCP 传输层交互并归一化检索结果。
-- `source/api.py`：实现 `DeepSearchTransport`，兼容 OpenAI Chat Completions 风格 API，支持环境变量配置与超时、异常处理。
-- `mcp/deepsearch.py` / `mcp/deepsearch_web.py`：分别提供广域检索与站点定向检索代理，开箱即用。
-- `tests/`：覆盖客户端、传输层、代理层的 pytest 用例，可作为二次开发的安全网。
+- `deepsearch_agents/`：包含 `DeepSearchAgent` 与 `DeepSearchWebAgent`，分别提供广域和站点定向检索能力。
+- `source/api.py`：实现 `DeepSearchTransport`，兼容 OpenAI Chat Completions 风格 API，支持环境变量配置、超时控制与异常处理。
+- `main.py`：MCP 服务器入口，通过 STDIO 注册 `deepsearch` 与 `deepsearch-web` 工具，供上游 AI 调用。
+- `tests/`：覆盖客户端、传输层、代理层与服务器的 pytest 用例，可作为二次开发的安全网。
 
 ## 快速开始
 1. 安装依赖（推荐使用 [uv](https://github.com/astral-sh/uv)）：
@@ -22,14 +23,18 @@ DeepSearch MCP 提供统一的 Python 客户端与代理层，方便在 MCP（Mo
    # 可选：自定义超时（秒）
    DEEPSEARCH_TIMEOUT=400
    ```
-3. 运行测试：
+3. 启动 MCP 服务器（STDIO 模式）：
+   ```bash
+   uv run python main.py
+   ```
+4. 运行测试：
    ```bash
    uv run pytest
    ```
 
 ## 使用示例
 ```python
-from mcp.deepsearch import DeepSearchAgent
+from deepsearch_agents import DeepSearchAgent
 
 agent = DeepSearchAgent()
 try:
@@ -40,7 +45,7 @@ finally:
     agent.close()
 ```
 
-如需站点定向检索，可改用 `DeepSearchWebAgent` 并传入 `filters={"site": "example.com"}` 或 `time_range` 等参数。
+如需站点定向检索，可改用 `DeepSearchWebAgent` 并传入 `filters={"site": "example.com"}` 或 `time_range` 等参数；通过 MCP 调用时可直接向工具传递相同字段。
 
 ## 常见问题
 - **提示缺少 `DEEPSEARCH_API_KEY`**：确认 `.env` 中已设置 `API_KEY` 或 `DEEPSEARCH_API_KEY`，并在运行前加载（`uv run` 会自动读取）。
