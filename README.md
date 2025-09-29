@@ -53,7 +53,7 @@ finally:
 ```toml
 [mcp_servers.deepsearch]
 command = "uv"
-args = ["run", "python", "main.py"]
+args = ["run", "--project", "/absolute/path/to/DeepSearch-MCP", "python", "main.py"]
 env = {
   "API_KEY" = "<你的 Deepsearch API Key>",
   "BASE_URL" = "https://yunwu.ai/v1/chat/completions",
@@ -74,7 +74,7 @@ codex mcp get deepsearch
 codex mcp remove deepsearch
 ```
 
-若使用其他 MCP 客户端（如 Claude Desktop、Cursor 等），可参考其文档，将命令与环境变量替换为 `uv run python main.py` 及相同的 Key 设置即可。
+若使用其他 MCP 客户端（如 Claude Desktop、Cursor 等），可按其配置方式指定启动命令，关键是让宿主在本仓库根目录下执行 `uv run python main.py`（或通过 `--project` 指定仓库路径），同时提供相同的环境变量即可。
 
 ## 常见问题
 - **提示缺少 `DEEPSEARCH_API_KEY`**：确认 `.env` 中已设置 `API_KEY` 或 `DEEPSEARCH_API_KEY`，并在运行前加载（`uv run` 会自动读取）。
