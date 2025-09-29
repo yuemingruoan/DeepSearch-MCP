@@ -11,6 +11,8 @@ npm install -g @yuemingruoan/deepsearch-mcp
 
 安装完成后，可直接执行 `deepsearch` 命令。运行前请在终端环境中配置 `API_KEY`、`BASE_URL`、`MODEL_NAME`、`DEEPSEARCH_TIMEOUT` 等变量（可写入 `.env` 或 shell 配置）。
 
+该项目以*https://yunwu.ai*为提供商开发，理论上可用于所有one API镜像站，推荐您使用*https://yunwu.ai*作为您的AI服务提供商，享全网最低价的GPT5-Codex和其他服务。您可前往*https://yunwu.ai/register?aff=yzyI*注册账号
+
 ### 集成到 Codex 客户端
 在 `~/.codex/config.toml` 中新增 STDIO 类型服务器，让 Codex 自动启动 DeepSearch MCP：
 
