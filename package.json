@@ -1,0 +1,11 @@
+{
+  "name": "deepsearch-mcp-local",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "deepsearch": "./bin/deepsearch.js"
+  },
+  "scripts": {
+    "deepsearch": "node ./bin/deepsearch.js"
+  }
+}

@@ -27,6 +27,10 @@ DeepSearch MCP 提供统一的 Python 客户端、代理层与 MCP 服务器入�
    ```bash
    uv run python main.py
    ```
+   或者使用项目内置的 Node.js 包装脚本：
+   ```bash
+   npm run deepsearch
+   ```
 4. 运行测试：
    ```bash
    uv run pytest
@@ -75,6 +79,19 @@ codex mcp remove deepsearch
 ```
 
 若使用其他 MCP 客户端（如 Claude Desktop、Cursor 等），可按其配置方式指定启动命令，关键是让宿主在本仓库根目录下执行 `uv run python main.py`（或通过 `--project` 指定仓库路径），同时提供相同的环境变量即可。
+
+## Node.js 启动脚本
+仓库根目录下的 `bin/deepsearch.js` 封装了 `uv run --project <repo> python main.py`，并在 `package.json` 中暴露为 `npm run deepsearch` / `npx deepsearch`。它会继承当前进程的环境变量，因此在 MCP 配置中设定的 `API_KEY`、`BASE_URL` 等会自动生效。
+
+若你希望直接在终端启动，可执行：
+
+```bash
+npm run deepsearch -- --top_k 3
+# 或者
+node ./bin/deepsearch.js
+```
+
+附加参数会透传给 `main.py`（目前主程序未解析自定义参数，因此一般无需额外参数）。确保 `uv` 命令位于 `PATH` 中，否则脚本会提示错误。
 
 ## 常见问题
 - **提示缺少 `DEEPSEARCH_API_KEY`**：确认 `.env` 中已设置 `API_KEY` 或 `DEEPSEARCH_API_KEY`，并在运行前加载（`uv run` 会自动读取）。
