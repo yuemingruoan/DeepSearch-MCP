@@ -47,6 +47,35 @@ finally:
 
 如需站点定向检索，可改用 `DeepSearchWebAgent` 并传入 `filters={"site": "example.com"}` 或 `time_range` 等参数；通过 MCP 调用时可直接向工具传递相同字段。
 
+## 集成到 Codex 客户端
+以 Codex 为例，可在其配置文件 `~/.codex/config.toml` 中新增一个 STDIO 类型的 MCP 服务器条目，让 Codex 在需要时自动启动本项目暴露的工具：
+
+```toml
+[mcp_servers.deepsearch]
+command = "uv"
+args = ["run", "python", "main.py"]
+env = {
+  "API_KEY" = "<你的 Deepsearch API Key>",
+  "BASE_URL" = "https://yunwu.ai/v1/chat/completions",
+  "MODEL_NAME" = "gemini-2.5-flash-deepsearch",
+  # 可选：覆盖默认超时
+  "DEEPSEARCH_TIMEOUT" = "400"
+}
+# 可按需调整 Codex 等待服务器启动或工具执行的超时时间
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+```
+
+配置完成后，可使用 Codex CLI 的实验性命令对服务器进行管理：
+
+```bash
+codex mcp list          # 查看已注册服务器
+codex mcp get deepsearch
+codex mcp remove deepsearch
+```
+
+若使用其他 MCP 客户端（如 Claude Desktop、Cursor 等），可参考其文档，将命令与环境变量替换为 `uv run python main.py` 及相同的 Key 设置即可。
+
 ## 常见问题
 - **提示缺少 `DEEPSEARCH_API_KEY`**：确认 `.env` 中已设置 `API_KEY` 或 `DEEPSEARCH_API_KEY`，并在运行前加载（`uv run` 会自动读取）。
 - **请求超时或无响应**：Deepsearch 模型可能响应较慢，可提高 `DEEPSEARCH_TIMEOUT`，或使用 `curl` 检查接口可用性。
