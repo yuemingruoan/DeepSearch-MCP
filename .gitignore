@@ -9,9 +9,11 @@ wheels/
 # Node-generated files
 node_modules/
 coverage/
+log/
 
 # TypeScript build artifacts
 *.tsbuildinfo
 
 # Virtual environments
 .venv
+log/*

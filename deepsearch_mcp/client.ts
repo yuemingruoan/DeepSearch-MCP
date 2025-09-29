@@ -1,4 +1,5 @@
 import type { DeepSearchResponsePayload, DeepSearchTransport } from "../source/api.js";
+import { logger, type Logger } from "../source/logger.js";
 
 export interface SearchResultItem {
   title: string;
@@ -25,10 +26,12 @@ export interface SearchOptions {
 export class DeepSearchMCPClient {
   private readonly transport: DeepSearchTransport;
   private readonly toolName: string;
+  private readonly logger: Logger;
 
   constructor(transport: DeepSearchTransport, options: { toolName?: string } = {}) {
     this.transport = transport;
     this.toolName = options.toolName ?? "deepsearch";
+    this.logger = logger.child({ module: "DeepSearchMCPClient", tool: this.toolName });
   }
 
   async search(query: string, options: SearchOptions = {}): Promise<SearchResult> {
@@ -44,11 +47,13 @@ export class DeepSearchMCPClient {
       filters: options.filters ?? {},
     };
 
+    this.logger.info("发起工具调用", payload);
     const response = await this.transport.invokeTool(this.toolName, payload);
     return this.toSearchResult(response);
   }
 
   private toSearchResult(response: DeepSearchResponsePayload): SearchResult {
+    this.logger.debug("解析响应", response);
     return {
       items: (response.items ?? []).map((item) => ({
         title: item.title ?? "",

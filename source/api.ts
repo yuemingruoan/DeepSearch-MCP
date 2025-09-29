@@ -1,4 +1,5 @@
 import { config as loadEnv } from "dotenv";
+import { logger } from "./logger.js";
 
 loadEnv();
 
@@ -100,6 +101,7 @@ export interface DeepSearchTransportOptions {
 export class DeepSearchTransport {
   private readonly config: DeepSearchConfig;
   private readonly endpoint: URL;
+  private readonly logger = logger.child({ module: "DeepSearchTransport" });
 
   constructor(options: DeepSearchTransportOptions | DeepSearchConfig) {
     this.config = options instanceof DeepSearchConfig ? options : new DeepSearchConfig(options);
@@ -113,6 +115,11 @@ export class DeepSearchTransport {
 
   async invokeTool(toolName: string, payload: InvokePayload): Promise<DeepSearchResponsePayload> {
     const body = this.buildRequest(toolName, payload);
+    this.logger.info("调用 DeepSearch API", {
+      toolName,
+      endpoint: this.endpoint.toString(),
+      timeoutMs: this.config.timeoutMs,
+    });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
@@ -130,23 +137,30 @@ export class DeepSearchTransport {
 
       if (!response.ok) {
         const message = `DeepSearch API 返回错误状态: ${response.status}`;
+        this.logger.warn(message, { responseHeaders: Object.fromEntries(response.headers.entries()) });
         throw new DeepSearchAPIError(message);
       }
 
       const data = (await response.json()) as Record<string, unknown>;
+      this.logger.debug("收到 DeepSearch API 响应", data);
       return this.parseResponse(data);
     } catch (error) {
       if (error instanceof DeepSearchAPIError) {
+        this.logger.error("DeepSearch API 调用失败", error);
         throw error;
       }
 
       if ((error as Error).name === "AbortError") {
-        throw new DeepSearchAPIError("DeepSearch API 请求超时", { cause: error as Error });
+        const timeoutError = new DeepSearchAPIError("DeepSearch API 请求超时", { cause: error as Error });
+        this.logger.error("DeepSearch API 请求超时", timeoutError);
+        throw timeoutError;
       }
 
-      throw new DeepSearchAPIError(`DeepSearch API 请求失败: ${(error as Error).message}`, {
+      const wrapped = new DeepSearchAPIError(`DeepSearch API 请求失败: ${(error as Error).message}`, {
         cause: error as Error,
       });
+      this.logger.error("DeepSearch API 调用过程中发生异常", wrapped);
+      throw wrapped;
     } finally {
       clearTimeout(timeout);
     }
@@ -168,11 +182,13 @@ export class DeepSearchTransport {
   private parseResponse(data: Record<string, unknown>): DeepSearchResponsePayload {
     const candidates = data?.candidates;
     if (!Array.isArray(candidates) || candidates.length === 0) {
+      this.logger.error("DeepSearch API 响应缺少候选项", data);
       throw new DeepSearchAPIError("DeepSearch API 响应缺少有效的消息内容");
     }
 
     const content = extractTextFromCandidate(candidates[0] as Record<string, unknown>);
     if (!content) {
+      this.logger.error("DeepSearch API 响应无法提取文本", candidates[0]);
       throw new DeepSearchAPIError("DeepSearch API 响应内容不是合法的 JSON");
     }
 
@@ -180,6 +196,7 @@ export class DeepSearchTransport {
     try {
       parsed = JSON.parse(sanitizeJsonContent(content));
     } catch (error) {
+      this.logger.error("DeepSearch API 响应 JSON 解析失败", { content, error });
       throw new DeepSearchAPIError("DeepSearch API 响应内容不是合法的 JSON", { cause: error as Error });
     }
 

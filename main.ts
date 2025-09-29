@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { DeepSearchAgent } from "./deepsearch_agents/deepsearch.js";
 import { DeepSearchWebAgent } from "./deepsearch_agents/deepsearch_web.js";
+import { logger } from "./source/logger.js";
 
 const searchItemShape = {
   title: z.string(),
@@ -48,6 +49,7 @@ interface ServerInitOptions {
 }
 
 export function createServer(options: ServerInitOptions = {}) {
+  logger.info("创建 DeepSearch MCP 服务器实例");
   const managedAgents: Array<{ close: () => void }> = [];
 
   const deepsearchAgent = options.deepsearchAgent ?? new DeepSearchAgent();
@@ -74,6 +76,8 @@ export function createServer(options: ServerInitOptions = {}) {
       outputSchema: searchResultShape,
     },
     async (args) => {
+      const toolLogger = logger.child({ tool: "deepsearch" });
+      toolLogger.info("收到工具调用", args);
       const result = await deepsearchAgent.search(args.query, {
         top_k: args.top_k,
         locale: args.locale,
@@ -81,6 +85,7 @@ export function createServer(options: ServerInitOptions = {}) {
       });
 
       const structured = searchResultSchema.parse(result);
+      toolLogger.info("完成工具调用", { itemCount: structured.items.length });
 
       return {
         content: [
@@ -103,6 +108,8 @@ export function createServer(options: ServerInitOptions = {}) {
       outputSchema: searchResultShape,
     },
     async (args) => {
+      const toolLogger = logger.child({ tool: "deepsearch-web" });
+      toolLogger.info("收到工具调用", args);
       const result = await deepsearchWebAgent.search(args.query, {
         top_k: args.top_k,
         locale: args.locale,
@@ -110,6 +117,7 @@ export function createServer(options: ServerInitOptions = {}) {
       });
 
       const structured = searchResultSchema.parse(result);
+      toolLogger.info("完成工具调用", { itemCount: structured.items.length });
 
       return {
         content: [
@@ -124,13 +132,15 @@ export function createServer(options: ServerInitOptions = {}) {
   );
 
   const close = async () => {
+    logger.info("开始关闭服务器与代理");
     for (const agent of managedAgents) {
       try {
         agent.close();
       } catch (error) {
-        console.error("关闭代理时出错", error);
+        logger.error("关闭代理时出错", error);
       }
     }
+    logger.info("代理关闭完成");
   };
 
   return { server, close };
@@ -142,29 +152,33 @@ export async function main() {
 
   const teardown = async () => {
     await server.close().catch((error) => {
-      console.error("关闭 MCP 服务器时出错", error);
+      logger.error("关闭 MCP 服务器时出错", error);
     });
     await close();
   };
 
   process.on("SIGINT", async () => {
+    logger.warn("接收到 SIGINT，准备退出");
     await teardown();
     process.exit(0);
   });
 
   process.on("SIGTERM", async () => {
+    logger.warn("接收到 SIGTERM，准备退出");
     await teardown();
     process.exit(0);
   });
 
+  logger.info("正在通过 STDIO 启动 MCP 服务器");
   await server.connect(transport);
+  logger.info("MCP 服务器启动完成，等待客户端连接");
 }
 
 const isDirectRun = fileURLToPath(import.meta.url) === process.argv[1];
 
 if (isDirectRun) {
   main().catch((error) => {
-    console.error("DeepSearch MCP 服务器启动失败", error);
+    logger.error("DeepSearch MCP 服务器启动失败", error);
     process.exit(1);
   });
 }
