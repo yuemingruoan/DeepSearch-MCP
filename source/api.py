@@ -108,13 +108,17 @@ class DeepSearchTransport:
 
     def invoke_tool(self, tool_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         request_body = self._build_request(tool_name, payload)
-        response = self._client.post("/v1/chat/completions", json=request_body)
         try:
+            response = self._client.post("/v1/chat/completions", json=request_body)
             response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise DeepSearchAPIError("DeepSearch API 请求超时") from exc
         except httpx.HTTPStatusError as exc:  # pragma: no cover - 防御性分支
             raise DeepSearchAPIError(
                 f"DeepSearch API 返回错误状态: {exc.response.status_code}"
             ) from exc
+        except httpx.RequestError as exc:
+            raise DeepSearchAPIError(f"DeepSearch API 请求失败: {exc}") from exc
         return self._parse_response(response.json())
 
     def _build_request(self, tool_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:

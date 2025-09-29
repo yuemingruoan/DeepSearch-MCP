@@ -129,3 +129,17 @@ def test_config_from_env_supports_legacy_variable_names(monkeypatch: pytest.Monk
     assert config.base_url == "https://example.com"
     assert config.model == "gemini-web"
     assert config.timeout == 15.0
+
+def test_transport_wraps_request_errors() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:  # pragma: no cover - 由测试捕获异常
+        raise httpx.ReadTimeout("timeout")
+
+    transport = DeepSearchTransport(
+        api_key="test-key",
+        http_transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(DeepSearchAPIError) as exc_info:
+        transport.invoke_tool("deepsearch", {"query": "timeout"})
+
+    assert "超时" in str(exc_info.value)
