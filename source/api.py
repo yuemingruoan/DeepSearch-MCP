@@ -23,7 +23,7 @@ class DeepSearchConfig:
     api_key: str
     base_url: str = "https://yunwu.ai"
     model: str = "gemini-2.5-pro"
-    timeout: float = 30.0
+    timeout: float = 400.0
 
     @classmethod
     def from_env(cls) -> "DeepSearchConfig":
@@ -76,7 +76,7 @@ class DeepSearchTransport:
         api_key: str,
         base_url: str = "https://yunwu.ai",
         model: str = "gemini-2.5-pro",
-        timeout: float = 30.0,
+        timeout: float = 400.0,
         http_transport: Optional[httpx.BaseTransport] = None,
     ) -> None:
         self._model = model
