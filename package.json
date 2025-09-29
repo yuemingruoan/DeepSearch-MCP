@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.2",
+    "@yuemingruoan/deepsearch-mcp": "^0.1.2",
     "dotenv": "^16.4.5",
     "undici": "^6.19.8",
     "zod": "^3.25.76"
