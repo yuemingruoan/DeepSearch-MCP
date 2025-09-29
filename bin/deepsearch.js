@@ -1,25 +1,25 @@
 #!/usr/bin/env node
 
-// 启动 DeepSearch MCP 服务器的 Node.js 包装脚本。
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const { spawn } = require("child_process");
-const path = require("path");
-
-const projectRoot = path.resolve(__dirname, "..");
+const __filename = fileURLToPath(import.meta.url);
+const projectRoot = path.resolve(path.dirname(__filename), "..");
 const userArgs = process.argv.slice(2);
-const uvArgs = [
-  "run",
-  "--project",
-  projectRoot,
-  "python",
-  "main.py",
-  ...userArgs,
-];
 
-const child = spawn("uv", uvArgs, {
+const distEntry = path.join(projectRoot, "dist", "main.js");
+const tsEntry = path.join(projectRoot, "main.ts");
+
+const command = existsSync(distEntry)
+  ? { cmd: "node", args: [distEntry, ...userArgs] }
+  : { cmd: process.platform === "win32" ? "npx.cmd" : "npx", args: ["tsx", tsEntry, ...userArgs] };
+
+const child = spawn(command.cmd, command.args, {
   stdio: "inherit",
   env: process.env,
-  shell: process.platform === "win32",
+  shell: false,
 });
 
 child.on("exit", (code, signal) => {
@@ -31,7 +31,7 @@ child.on("exit", (code, signal) => {
 });
 
 child.on("error", (error) => {
-  console.error("无法启动 uv，请确认已安装 uv 并在 PATH 中可用。");
+  console.error("无法启动 DeepSearch MCP 服务器，请确认已安装 tsx 或已执行 npm run build。");
   console.error(error);
   process.exit(1);
 });

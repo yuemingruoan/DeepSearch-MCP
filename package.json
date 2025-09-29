@@ -1,11 +1,59 @@
 {
-  "name": "deepsearch-mcp-local",
+  "name": "deepsearch-mcp",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "type": "module",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
   "bin": {
     "deepsearch": "./bin/deepsearch.js"
   },
+  "exports": {
+    ".": {
+      "import": "./dist/main.js",
+      "types": "./dist/main.d.ts"
+    },
+    "./deepsearch_agents/*": {
+      "import": "./dist/deepsearch_agents/*.js",
+      "types": "./dist/deepsearch_agents/*.d.ts"
+    },
+    "./deepsearch_mcp/*": {
+      "import": "./dist/deepsearch_mcp/*.js",
+      "types": "./dist/deepsearch_mcp/*.d.ts"
+    },
+    "./source/*": {
+      "import": "./dist/source/*.js",
+      "types": "./dist/source/*.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "AGENTS.md",
+    "API_Docs.md"
+  ],
   "scripts": {
-    "deepsearch": "node ./bin/deepsearch.js"
+    "deepsearch": "node ./bin/deepsearch.js",
+    "dev": "tsx main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "dotenv": "^16.4.5",
+    "undici": "^6.19.8",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.4",
+    "@vitest/coverage-v8": "^1.6.0",
+    "tsx": "^4.9.3",
+    "typescript": "^5.6.3",
+    "vitest": "^1.6.0"
   }
 }
